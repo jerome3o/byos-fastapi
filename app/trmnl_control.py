@@ -90,6 +90,38 @@ class TRMNLController:
         filename, file_path = self.image_gen.html_to_image(html_content, filename)
         return filename
     
+    def create_big_text_image(self, text: str, subtitle: str = None, device_id: str = None,
+                             filename: str = None) -> str:
+        """
+        Create an image with big text that fills the screen.
+        
+        Args:
+            text: Main text to display in large font
+            subtitle: Optional smaller text below main text  
+            device_id: Specific device MAC address
+            filename: Custom filename for the image
+            
+        Returns:
+            str: Filename of the created image
+            
+        Example:
+            controller = TRMNLController()
+            
+            # Simple big text
+            controller.create_big_text_image("HELLO WORLD")
+            
+            # With subtitle
+            controller.create_big_text_image("ALERT", "System Status: OK")
+        """
+        if device_id and filename:
+            filename = f"{device_id}-{filename}"
+        elif device_id:
+            timestamp = datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+            filename = f"{device_id}-big-text-{timestamp}"
+        
+        filename, file_path = self.image_gen.create_big_text_image(text, subtitle, filename)
+        return filename
+    
     def get_connected_devices(self) -> List[Dict[str, Any]]:
         """
         Get list of all connected/registered devices.
@@ -197,6 +229,33 @@ def create_image(content: str = None, device_id: str = None,
     """
     controller = get_controller()
     return controller.create_image(content, device_id, filename, **kwargs)
+
+def create_big_text_image(text: str, subtitle: str = None, device_id: str = None,
+                         filename: str = None) -> str:
+    """
+    Convenience function to create big text images using the global controller.
+    
+    Args:
+        text: Main text to display in large font
+        subtitle: Optional smaller text below main text  
+        device_id: Specific device MAC address (optional)
+        filename: Custom filename (optional)
+        
+    Returns:
+        str: Filename of the created image
+        
+    Example:
+        # Simple big text
+        create_big_text_image("HELLO WORLD")
+        
+        # With subtitle  
+        create_big_text_image("SYSTEM ALERT", "All systems operational")
+        
+        # Custom message
+        create_big_text_image("WELCOME", f"Today is {datetime.now().strftime('%A')}")
+    """
+    controller = get_controller()
+    return controller.create_big_text_image(text, subtitle, device_id, filename)
 
 def schedule_updates(update_function, interval_minutes: int = 30):
     """

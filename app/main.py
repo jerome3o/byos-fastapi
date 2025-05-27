@@ -79,30 +79,8 @@ async def display_endpoint(
     # Generate or get current image
     base_url = get_base_url(request)
     
-    # Create big HELLO WORLD display
-    content = f"""
-
-
-    H   H  EEEEE  L      L      OOOO
-    H   H  E      L      L     O    O
-    HHHHH  EEEE   L      L     O    O
-    H   H  E      L      L     O    O
-    H   H  EEEEE  LLLLLL LLLLLL OOOO
-
-
-    W   W   OOOO   RRRR   L      DDDD
-    W   W  O    O  R   R  L      D   D
-    W W W  O    O  RRRR   L      D   D
-    WW WW  O    O  R  R   L      D   D
-    W   W   OOOO   R   R  LLLLLL DDDD
-
-
-      YOUR TRMNL IS HACKED! 🚀
-      
-      Time: {datetime.utcnow().strftime('%H:%M:%S')}
-      Refresh: Every 60 seconds"""
-
-    filename, file_path = image_gen.create_image(content=content)
+    # Create big HELLO WORLD image using proper image generation
+    filename, file_path = image_gen.create_hello_world_image()
     image_url = f"{base_url}/static/images/{filename}.png"
     
     return DisplayResponse(

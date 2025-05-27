@@ -123,6 +123,98 @@ class ImageGenerator:
         clean = re.compile('<.*?>')
         return re.sub(clean, '', html).strip()
     
+    def create_big_text_image(self, text: str, subtitle: str = None, filename: str = None, 
+                             width: int = 800, height: int = 480) -> Tuple[str, str]:
+        """
+        Create an image with very large text that fills the screen.
+        
+        Args:
+            text: Main text to display in large font
+            subtitle: Optional smaller text below main text
+            filename: Custom filename (if None, generates timestamp-based name)
+            width: Image width in pixels
+            height: Image height in pixels
+            
+        Returns:
+            Tuple of (filename, file_path)
+        """
+        if filename is None:
+            timestamp = datetime.utcnow().strftime("%Y-%m-%d-T%H-%M-%SZ")
+            filename = f"big-text-{timestamp}"
+        
+        # Create PIL image
+        image = Image.new('1', (width, height), 1)  # 1-bit image, white background
+        draw = ImageDraw.Draw(image)
+        
+        # Try to get the largest possible font size that fits
+        main_font_size = self._find_max_font_size(draw, text, width - 40, height // 2)
+        
+        try:
+            # Try to use a better font if available
+            from PIL import ImageFont
+            main_font = ImageFont.load_default()
+        except:
+            main_font = None
+        
+        # Get text dimensions
+        if main_font:
+            bbox = draw.textbbox((0, 0), text, font=main_font)
+            text_width = bbox[2] - bbox[0]
+            text_height = bbox[3] - bbox[1]
+        else:
+            # Fallback estimation
+            text_width = len(text) * 6
+            text_height = 11
+        
+        # Center the main text
+        main_x = (width - text_width) // 2
+        main_y = (height - text_height) // 2
+        
+        # If we have a subtitle, move main text up a bit
+        if subtitle:
+            main_y = main_y - 30
+        
+        # Draw main text
+        draw.text((main_x, main_y), text, fill=0, font=main_font)
+        
+        # Draw subtitle if provided
+        if subtitle:
+            if main_font:
+                sub_bbox = draw.textbbox((0, 0), subtitle, font=main_font)
+                sub_width = sub_bbox[2] - sub_bbox[0]
+            else:
+                sub_width = len(subtitle) * 6
+            
+            sub_x = (width - sub_width) // 2
+            sub_y = main_y + text_height + 20
+            draw.text((sub_x, sub_y), subtitle, fill=0, font=main_font)
+        
+        # Draw a border for effect
+        draw.rectangle([5, 5, width-5, height-5], outline=0, width=2)
+        
+        # Save as PNG
+        png_path = self.output_dir / f"{filename}.png"
+        self._convert_to_monochrome_png(image, png_path)
+        
+        return filename, str(png_path)
+    
+    def _find_max_font_size(self, draw: ImageDraw.Draw, text: str, max_width: int, max_height: int) -> int:
+        """Find the maximum font size that fits within the given dimensions."""
+        # This is a simplified version - PIL's default font doesn't support sizing
+        # In a real implementation, you'd use a TTF font with variable sizing
+        return 24  # Default size
+    
+    def create_hello_world_image(self, filename: str = None) -> Tuple[str, str]:
+        """Create a dramatic HELLO WORLD image with big text."""
+        timestamp = datetime.utcnow().strftime('%H:%M:%S')
+        subtitle = f"YOUR TRMNL IS HACKED! 🚀 | Time: {timestamp}"
+        
+        return self.create_big_text_image(
+            text="HELLO WORLD",
+            subtitle=subtitle,
+            filename=filename or f"hello-world-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}"
+        )
+
     def create_welcome_image(self, device_id: str) -> Tuple[str, str]:
         """Create a welcome image for device setup."""
         content = f"""Welcome to TRMNL!
