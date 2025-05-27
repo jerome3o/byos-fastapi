@@ -1,5 +1,7 @@
-import pytest
 import tempfile
+
+import pytest
+
 from app.trmnl_control import TRMNLController, create_image
 
 
@@ -7,7 +9,7 @@ from app.trmnl_control import TRMNLController, create_image
 def controller():
     """Create a TRMNLController with temporary directories."""
     with tempfile.TemporaryDirectory() as temp_dir:
-        with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as db_file:
+        with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as db_file:
             yield TRMNLController(db_file.name, temp_dir)
 
 
@@ -42,12 +44,13 @@ def test_global_create_image_function():
 
 def test_controller_schedule_update(controller):
     """Test scheduling updates (without actually running them)."""
+
     def test_update():
         return "Scheduled update content"
-    
+
     # This should not raise an exception
     controller.schedule_update(test_update, interval_minutes=1)
-    
+
     # Verify that a job was scheduled
     assert len(controller.scheduled_jobs) > 0
 
@@ -56,7 +59,7 @@ def test_controller_scheduler_lifecycle(controller):
     """Test starting and stopping the scheduler."""
     controller.start_scheduler()
     assert controller._scheduler_running is True
-    
+
     controller.stop_scheduler()
     assert controller._scheduler_running is False
     assert len(controller.scheduled_jobs) == 0

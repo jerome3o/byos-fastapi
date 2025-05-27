@@ -1,22 +1,23 @@
-from pydantic import BaseModel, Field
-from typing import Optional, Literal
 from datetime import datetime
+from typing import Literal
+
+from pydantic import BaseModel, Field
 
 
 class DeviceHeaders(BaseModel):
     id: str = Field(..., description="Device MAC address")
     access_token: str = Field(..., alias="Access-Token")
-    refresh_rate: Optional[int] = Field(None, alias="Refresh-Rate")
-    battery_voltage: Optional[float] = Field(None, alias="Battery-Voltage")
-    fw_version: Optional[str] = Field(None, alias="FW-Version")
-    rssi: Optional[int] = Field(None, alias="RSSI")
-    width: Optional[int] = Field(800, alias="Width")
-    height: Optional[int] = Field(480, alias="Height")
+    refresh_rate: int | None = Field(None, alias="Refresh-Rate")
+    battery_voltage: float | None = Field(None, alias="Battery-Voltage")
+    fw_version: str | None = Field(None, alias="FW-Version")
+    rssi: int | None = Field(None, alias="RSSI")
+    width: int | None = Field(800, alias="Width")
+    height: int | None = Field(480, alias="Height")
 
 
 class SetupHeaders(BaseModel):
     id: str = Field(..., description="Device MAC address")
-    fw_version: Optional[str] = Field(None, alias="FW-Version")
+    fw_version: str | None = Field(None, alias="FW-Version")
 
 
 class DisplayResponse(BaseModel):
@@ -25,7 +26,7 @@ class DisplayResponse(BaseModel):
     filename: str
     refresh_rate: int = 1800
     update_firmware: bool = False
-    firmware_url: Optional[str] = None
+    firmware_url: str | None = None
     reset_firmware: bool = False
     special_function: str = "sleep"
     image_url_timeout: int = 30
@@ -40,25 +41,25 @@ class SetupResponse(BaseModel):
 
 
 class DeviceLog(BaseModel):
-    battery_voltage: Optional[float] = None
-    heap_free: Optional[int] = None
-    rssi: Optional[int] = None
-    wake_reason: Optional[str] = None
-    sleep_duration: Optional[int] = None
-    firmware_version: Optional[str] = None
-    uptime: Optional[int] = None
-    wifi_connect_time: Optional[int] = None
-    image_download_time: Optional[int] = None
-    display_render_time: Optional[int] = None
+    battery_voltage: float | None = None
+    heap_free: int | None = None
+    rssi: int | None = None
+    wake_reason: str | None = None
+    sleep_duration: int | None = None
+    firmware_version: str | None = None
+    uptime: int | None = None
+    wifi_connect_time: int | None = None
+    image_download_time: int | None = None
+    display_render_time: int | None = None
 
 
 class ScreenRequest(BaseModel):
     content_type: Literal["html", "uri", "data"]
     content: str
-    filename: Optional[str] = None
+    filename: str | None = None
     width: int = 800
     height: int = 480
-    device_id: Optional[str] = None
+    device_id: str | None = None
 
 
 class ScreenResponse(BaseModel):
@@ -72,13 +73,13 @@ class Device(BaseModel):
     api_key: str
     friendly_id: str
     created_at: datetime
-    last_seen: Optional[datetime] = None
-    firmware_version: Optional[str] = None
-    battery_voltage: Optional[float] = None
+    last_seen: datetime | None = None
+    firmware_version: str | None = None
+    battery_voltage: float | None = None
 
 
 class ErrorResponse(BaseModel):
     status: int
     error: str
     message: str
-    retry_after: Optional[int] = None
+    retry_after: int | None = None

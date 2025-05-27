@@ -1,26 +1,26 @@
-from fastapi import FastAPI, HTTPException, Header, Request, Depends
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
-from datetime import datetime, timedelta
+import os
 import secrets
 import string
-from typing import Optional
-import uvicorn
-import os
+from datetime import datetime
 
-from .models import (
-    DeviceHeaders,
-    SetupHeaders,
-    DisplayResponse,
-    SetupResponse,
-    DeviceLog,
-    ScreenRequest,
-    ScreenResponse,
-    ErrorResponse,
-)
+import uvicorn
+from fastapi import FastAPI, Header, Request
+from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
+
 from .database import Database
 from .image_utils import ImageGenerator
-from .models import Device
+from .models import (
+    Device,
+    DeviceLog,
+    DisplayResponse,
+    ErrorResponse,
+    ScreenRequest,
+    ScreenResponse,
+    SetupResponse,
+)
+
+REFRESH_RATE = 900  # Default refresh rate in seconds
 
 app = FastAPI(
     title="TRMNL Custom Server",
@@ -75,12 +75,12 @@ async def display_endpoint(
     request: Request,
     id: str = Header(..., description="Device MAC address"),
     access_token: str = Header(None, alias="Access-Token"),
-    refresh_rate: Optional[int] = Header(None, alias="Refresh-Rate"),
-    battery_voltage: Optional[float] = Header(None, alias="Battery-Voltage"),
-    fw_version: Optional[str] = Header(None, alias="FW-Version"),
-    rssi: Optional[int] = Header(None, alias="RSSI"),
-    width: Optional[int] = Header(800, alias="Width"),
-    height: Optional[int] = Header(480, alias="Height"),
+    refresh_rate: int | None = Header(None, alias="Refresh-Rate"),
+    battery_voltage: float | None = Header(None, alias="Battery-Voltage"),
+    fw_version: str | None = Header(None, alias="FW-Version"),
+    rssi: int | None = Header(None, alias="RSSI"),
+    width: int | None = Header(800, alias="Width"),
+    height: int | None = Header(480, alias="Height"),
 ):
     """Primary device endpoint for screen content delivery (open access)."""
 
@@ -103,7 +103,7 @@ async def display_endpoint(
         status=0,
         image_url=image_url,
         filename=filename,
-        refresh_rate=60,  # Refresh every 1 minute for faster updates
+        refresh_rate=REFRESH_RATE,
         update_firmware=False,
         firmware_url=None,
         reset_firmware=False,
@@ -116,7 +116,7 @@ async def display_endpoint(
 async def setup_endpoint(
     request: Request,
     id: str = Header(..., description="Device MAC address"),
-    fw_version: Optional[str] = Header(None, alias="FW-Version"),
+    fw_version: str | None = Header(None, alias="FW-Version"),
 ):
     """Device provisioning during first boot."""
 
@@ -247,7 +247,7 @@ Battery: {battery}V
 Firmware: {firmware}
 
 Server Status: Running
-Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"""
+Time: {datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")}"""
 
     filename, file_path = image_gen.create_image(content=content)
     image_url = f"{base_url}/static/images/{filename}.png"
@@ -256,7 +256,7 @@ Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"""
         status=0,
         image_url=image_url,
         filename=filename,
-        refresh_rate=60,  # Refresh every 1 minute for faster updates
+        refresh_rate=REFRESH_RATE,
         update_firmware=False,
         firmware_url=None,
         reset_firmware=False,
