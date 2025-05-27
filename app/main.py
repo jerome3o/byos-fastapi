@@ -79,20 +79,28 @@ async def display_endpoint(
     # Generate or get current image
     base_url = get_base_url(request)
     
-    # For now, create a default image with current status
-    content = f"""Device Status Update
+    # Create big HELLO WORLD display
+    content = f"""
 
-MAC: {id}
-Battery: {battery_voltage}V
-Signal: {rssi}dBm
-Firmware: {fw_version}
-Last Update: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}
 
-Refresh Rate: {refresh_rate or 1800}s
-Resolution: {width}x{height}
+    H   H  EEEEE  L      L      OOOO
+    H   H  E      L      L     O    O
+    HHHHH  EEEE   L      L     O    O
+    H   H  E      L      L     O    O
+    H   H  EEEEE  LLLLLL LLLLLL OOOO
 
-Server: Custom FastAPI
-Status: Operational"""
+
+    W   W   OOOO   RRRR   L      DDDD
+    W   W  O    O  R   R  L      D   D
+    W W W  O    O  RRRR   L      D   D
+    WW WW  O    O  R  R   L      D   D
+    W   W   OOOO   R   R  LLLLLL DDDD
+
+
+      YOUR TRMNL IS HACKED! 🚀
+      
+      Time: {datetime.utcnow().strftime('%H:%M:%S')}
+      Refresh: Every 60 seconds"""
 
     filename, file_path = image_gen.create_image(content=content)
     image_url = f"{base_url}/static/images/{filename}.png"
@@ -101,7 +109,7 @@ Status: Operational"""
         status=0,
         image_url=image_url,
         filename=filename,
-        refresh_rate=refresh_rate or 1800,
+        refresh_rate=60,  # Refresh every 1 minute for faster updates
         update_firmware=False,
         firmware_url=None,
         reset_firmware=False,
@@ -251,7 +259,7 @@ Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"""
         status=0,
         image_url=image_url,
         filename=filename,
-        refresh_rate=1800,
+        refresh_rate=60,  # Refresh every 1 minute for faster updates
         update_firmware=False,
         firmware_url=None,
         reset_firmware=False,
