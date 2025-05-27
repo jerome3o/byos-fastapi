@@ -108,19 +108,10 @@ def test_display_endpoint_authorized(client):
     assert data["refresh_rate"] == 1800
 
 def test_log_endpoint(client):
-    """Test device logging endpoint."""
-    # Setup device first
-    setup_headers = {
-        "ID": "AA:BB:CC:DD:EE:FF",
-        "FW-Version": "1.5.2"
-    }
-    setup_response = client.post("/api/setup", headers=setup_headers)
-    setup_data = setup_response.json()
-    
-    # Test logging
+    """Test device logging endpoint (no auth required)."""
+    # Test logging without authentication
     log_headers = {
-        "ID": "AA:BB:CC:DD:EE:FF",
-        "Access-Token": setup_data["api_key"]
+        "ID": "AA:BB:CC:DD:EE:FF"
     }
     
     log_data = {
@@ -133,6 +124,20 @@ def test_log_endpoint(client):
     
     response = client.post("/api/log", headers=log_headers, json=log_data)
     assert response.status_code == 200
+
+def test_log_endpoint_unknown_device(client):
+    """Test device logging endpoint with unknown device."""
+    log_headers = {
+        "ID": "FF:FF:FF:FF:FF:FF"  # Unknown device
+    }
+    
+    log_data = {
+        "battery_voltage": 3.8,
+        "firmware_version": "1.4.0"
+    }
+    
+    response = client.post("/api/log", headers=log_headers, json=log_data)
+    assert response.status_code == 200  # Should still accept the log
 
 def test_create_screen_endpoint(client):
     """Test screen creation endpoint."""

@@ -177,20 +177,23 @@ async def setup_endpoint(
 @app.post("/api/log")
 async def log_endpoint(
     log_data: DeviceLog,
-    device: Device = Depends(authenticate_device)
+    id: str = Header(..., description="Device MAC address"),
+    access_token: str = Header(None, alias="Access-Token")
 ):
-    """Device telemetry and logging endpoint."""
+    """Device telemetry and logging endpoint (open access)."""
     
-    # Store device log data
-    db.log_device_data(device.mac_address, log_data)
+    # Store device log data (use MAC address from header)
+    db.log_device_data(id, log_data)
     
-    # Update device status with latest telemetry
-    db.update_device_status(
-        device.mac_address,
-        last_seen=datetime.utcnow(),
-        firmware_version=log_data.firmware_version,
-        battery_voltage=log_data.battery_voltage
-    )
+    # Update device status with latest telemetry if device exists
+    existing_device = db.get_device(id)
+    if existing_device:
+        db.update_device_status(
+            id,
+            last_seen=datetime.utcnow(),
+            firmware_version=log_data.firmware_version,
+            battery_voltage=log_data.battery_voltage
+        )
     
     return {"status": "success", "message": "Log data received"}
 
