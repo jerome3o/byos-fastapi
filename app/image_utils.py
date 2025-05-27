@@ -126,10 +126,10 @@ class ImageGenerator:
     def create_big_text_image(self, text: str, subtitle: str = None, filename: str = None, 
                              width: int = 800, height: int = 480) -> Tuple[str, str]:
         """
-        Create an image with very large text that fills the screen.
+        Create an image with MASSIVE text that fills the entire screen.
         
         Args:
-            text: Main text to display in large font
+            text: Main text to display in huge font
             subtitle: Optional smaller text below main text
             filename: Custom filename (if None, generates timestamp-based name)
             width: Image width in pixels
@@ -138,65 +138,136 @@ class ImageGenerator:
         Returns:
             Tuple of (filename, file_path)
         """
+        # Always use manual drawing to ensure massive text
+        return self._create_massive_text_manually(text, subtitle, filename, width, height)
+    
+    def _create_massive_text_manually(self, text: str, subtitle: str = None, filename: str = None,
+                                     width: int = 800, height: int = 480) -> Tuple[str, str]:
+        """Create massive text by drawing it manually when font scaling fails."""
         if filename is None:
             timestamp = datetime.utcnow().strftime("%Y-%m-%d-T%H-%M-%SZ")
-            filename = f"big-text-{timestamp}"
-        
+            filename = f"big-text-manual-{timestamp}"
+            
         # Create PIL image
         image = Image.new('1', (width, height), 1)  # 1-bit image, white background
         draw = ImageDraw.Draw(image)
         
-        # Try to get the largest possible font size that fits
-        main_font_size = self._find_max_font_size(draw, text, width - 40, height // 2)
+        # Calculate character size to fit screen - make it MASSIVE
+        char_count = len(text.replace(' ', ''))  # Don't count spaces
+        spaces_count = text.count(' ')
+        if char_count == 0:
+            char_count = 1
+            
+        # Use most of the screen for the text
+        available_width = width - 20
+        available_height = height - 100 if subtitle else height - 20
         
-        try:
-            # Try to use a better font if available
-            from PIL import ImageFont
-            main_font = ImageFont.load_default()
-        except:
-            main_font = None
+        # Make each character take up most of the available space
+        char_width = available_width // (char_count + spaces_count // 2)  # Spaces take less room
+        char_height = available_height * 2 // 3  # Use 2/3 of available height
         
-        # Get text dimensions
-        if main_font:
-            bbox = draw.textbbox((0, 0), text, font=main_font)
-            text_width = bbox[2] - bbox[0]
-            text_height = bbox[3] - bbox[1]
-        else:
-            # Fallback estimation
-            text_width = len(text) * 6
-            text_height = 11
+        # Center everything
+        total_width = char_count * char_width + (spaces_count * char_width // 3)
+        start_x = (width - total_width) // 2
+        start_y = (available_height - char_height) // 2 + 10
         
-        # Center the main text
-        main_x = (width - text_width) // 2
-        main_y = (height - text_height) // 2
+        current_x = start_x
         
-        # If we have a subtitle, move main text up a bit
-        if subtitle:
-            main_y = main_y - 30
-        
-        # Draw main text
-        draw.text((main_x, main_y), text, fill=0, font=main_font)
+        for char in text:
+            if char == ' ':
+                current_x += char_width // 3  # Small space for actual spaces
+                continue
+                
+            # Draw MASSIVE filled rectangles for each character
+            rect_width = char_width - 8  # Small spacing between characters
+            rect_height = char_height
+            
+            # Fill the entire character area with black
+            draw.rectangle([current_x, start_y, current_x + rect_width, start_y + rect_height], 
+                         fill=0)  # Solid black rectangles
+            
+            # Add white details inside to make letters more recognizable
+            inner_margin = rect_width // 8
+            inner_x = current_x + inner_margin
+            inner_y = start_y + inner_margin
+            inner_width = rect_width - 2 * inner_margin
+            inner_height = rect_height - 2 * inner_margin
+            
+            # Add character-specific white cutouts to make it look like letters
+            if char.upper() == 'H':
+                # H: vertical bars with horizontal connection
+                bar_width = inner_width // 4
+                draw.rectangle([inner_x + bar_width, inner_y, inner_x + inner_width - bar_width, inner_y + inner_height], fill=1)
+                draw.rectangle([inner_x, inner_y + inner_height//3, inner_x + inner_width, inner_y + 2*inner_height//3], fill=0)
+            elif char.upper() == 'E':
+                # E: remove right side except for horizontal bars
+                draw.rectangle([inner_x + inner_width//2, inner_y, inner_x + inner_width, inner_y + inner_height], fill=1)
+                draw.rectangle([inner_x, inner_y + inner_height//3, inner_x + inner_width, inner_y + 2*inner_height//3], fill=0)
+            elif char.upper() == 'L':
+                # L: remove top right
+                draw.rectangle([inner_x + inner_width//3, inner_y, inner_x + inner_width, inner_y + 2*inner_height//3], fill=1)
+            elif char.upper() == 'O':
+                # O: hollow center
+                draw.ellipse([inner_x + inner_width//4, inner_y + inner_height//4, 
+                            inner_x + 3*inner_width//4, inner_y + 3*inner_height//4], fill=1)
+            elif char.upper() == 'W':
+                # W: two V shapes
+                draw.polygon([inner_x + inner_width//4, inner_y, inner_x + inner_width//2, inner_y + inner_height//2,
+                            inner_x + 3*inner_width//4, inner_y], fill=1)
+            elif char.upper() == 'R':
+                # R: like P but with diagonal
+                draw.rectangle([inner_x + inner_width//2, inner_y, inner_x + inner_width, inner_y + inner_height//2], fill=1)
+                draw.rectangle([inner_x + inner_width//3, inner_y + inner_height//4, inner_x + inner_width, inner_y + 3*inner_height//4], fill=1)
+            elif char.upper() == 'D':
+                # D: rounded right side
+                draw.rectangle([inner_x + 2*inner_width//3, inner_y, inner_x + inner_width, inner_y + inner_height], fill=1)
+                draw.ellipse([inner_x + inner_width//3, inner_y, inner_x + inner_width, inner_y + inner_height], fill=1, outline=0)
+            
+            current_x += char_width
         
         # Draw subtitle if provided
         if subtitle:
-            if main_font:
-                sub_bbox = draw.textbbox((0, 0), subtitle, font=main_font)
-                sub_width = sub_bbox[2] - sub_bbox[0]
-            else:
-                sub_width = len(subtitle) * 6
-            
+            sub_y = start_y + char_height + 30
+            # Use default font for subtitle but try to make it larger
+            try:
+                from PIL import ImageFont
+                sub_font = ImageFont.load_default()
+            except:
+                sub_font = None
+                
+            sub_bbox = draw.textbbox((0, 0), subtitle, font=sub_font) if sub_font else (0, 0, len(subtitle) * 8, 16)
+            sub_width = sub_bbox[2] - sub_bbox[0]
             sub_x = (width - sub_width) // 2
-            sub_y = main_y + text_height + 20
-            draw.text((sub_x, sub_y), subtitle, fill=0, font=main_font)
-        
-        # Draw a border for effect
-        draw.rectangle([5, 5, width-5, height-5], outline=0, width=2)
+            
+            draw.text((sub_x, sub_y), subtitle, fill=0, font=sub_font)
         
         # Save as PNG
         png_path = self.output_dir / f"{filename}.png"
         self._convert_to_monochrome_png(image, png_path)
         
         return filename, str(png_path)
+    
+    def _find_max_font_size_that_fits(self, draw: ImageDraw.Draw, text: str, max_width: int, max_height: int) -> int:
+        """Find the maximum font size that fits within the given dimensions."""
+        # Start with a very large font size and work down
+        for font_size in range(200, 10, -5):  # Try sizes from 200 down to 10
+            try:
+                from PIL import ImageFont
+                test_font = ImageFont.load_default()
+                bbox = draw.textbbox((0, 0), text, font=test_font)
+                text_width = bbox[2] - bbox[0]
+                text_height = bbox[3] - bbox[1]
+                
+                # Scale the estimated size based on desired font size
+                estimated_width = text_width * (font_size / 11)  # 11 is approx default font size
+                estimated_height = text_height * (font_size / 11)
+                
+                if estimated_width <= max_width and estimated_height <= max_height:
+                    return font_size
+            except:
+                continue
+                
+        return 80  # Fallback to a large size
     
     def _find_max_font_size(self, draw: ImageDraw.Draw, text: str, max_width: int, max_height: int) -> int:
         """Find the maximum font size that fits within the given dimensions."""
