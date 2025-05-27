@@ -20,7 +20,7 @@ from .models import (
     SetupResponse,
 )
 
-REFRESH_RATE = 900  # Default refresh rate in seconds
+REFRESH_RATE = 9000  # Default refresh rate in seconds
 
 app = FastAPI(
     title="TRMNL Custom Server",
