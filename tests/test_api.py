@@ -66,30 +66,10 @@ def test_setup_existing_device(client):
     assert data1["api_key"] == data2["api_key"]
     assert data1["friendly_id"] == data2["friendly_id"]
 
-def test_display_endpoint_unauthorized(client):
-    """Test display endpoint with invalid credentials."""
+def test_display_endpoint_no_auth_required(client):
+    """Test display endpoint without authentication."""
     headers = {
         "ID": "AA:BB:CC:DD:EE:FF",
-        "Access-Token": "invalid-token"
-    }
-    
-    response = client.get("/api/display", headers=headers)
-    assert response.status_code == 401
-
-def test_display_endpoint_authorized(client):
-    """Test display endpoint with valid credentials."""
-    # First setup a device
-    setup_headers = {
-        "ID": "AA:BB:CC:DD:EE:FF",
-        "FW-Version": "1.5.2"
-    }
-    setup_response = client.post("/api/setup", headers=setup_headers)
-    setup_data = setup_response.json()
-    
-    # Now test display endpoint
-    display_headers = {
-        "ID": "AA:BB:CC:DD:EE:FF",
-        "Access-Token": setup_data["api_key"],
         "Refresh-Rate": "1800",
         "Battery-Voltage": "4.12",
         "FW-Version": "1.5.2",
@@ -98,7 +78,7 @@ def test_display_endpoint_authorized(client):
         "Height": "480"
     }
     
-    response = client.get("/api/display", headers=display_headers)
+    response = client.get("/api/display", headers=headers)
     assert response.status_code == 200
     
     data = response.json()
@@ -140,10 +120,8 @@ def test_log_endpoint_unknown_device(client):
     assert response.status_code == 200  # Should still accept the log
 
 def test_create_screen_endpoint(client):
-    """Test screen creation endpoint."""
-    headers = {
-        "Access-Token": "test-token"
-    }
+    """Test screen creation endpoint (no auth required)."""
+    headers = {}
     
     screen_data = {
         "content_type": "html",
@@ -162,19 +140,9 @@ def test_create_screen_endpoint(client):
     assert "filename" in data
 
 def test_current_screen_endpoint(client):
-    """Test current screen endpoint."""
-    # Setup device first
-    setup_headers = {
-        "ID": "AA:BB:CC:DD:EE:FF",
-        "FW-Version": "1.5.2"
-    }
-    setup_response = client.post("/api/setup", headers=setup_headers)
-    setup_data = setup_response.json()
-    
-    # Test current screen
+    """Test current screen endpoint (no auth required)."""
     headers = {
-        "ID": "AA:BB:CC:DD:EE:FF",
-        "Access-Token": setup_data["api_key"]
+        "ID": "AA:BB:CC:DD:EE:FF"
     }
     
     response = client.get("/api/current_screen", headers=headers)

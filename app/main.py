@@ -42,18 +42,7 @@ def get_base_url(request: Request) -> str:
     """Get the base URL for image serving."""
     return f"{request.url.scheme}://{request.headers.get('host', 'localhost')}"
 
-def authenticate_device(
-    id: str = Header(..., description="Device MAC address"),
-    access_token: str = Header(..., alias="Access-Token")
-) -> Device:
-    """Authenticate device using MAC address and API key."""
-    device = db.get_device(id)
-    if not device or device.api_key != access_token:
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid device credentials"
-        )
-    return device
+# Authentication removed - all endpoints now have open access
 
 @app.get("/")
 async def root():
@@ -69,7 +58,7 @@ async def root():
 async def display_endpoint(
     request: Request,
     id: str = Header(..., description="Device MAC address"),
-    access_token: str = Header(..., alias="Access-Token"),
+    access_token: str = Header(None, alias="Access-Token"),
     refresh_rate: Optional[int] = Header(None, alias="Refresh-Rate"),
     battery_voltage: Optional[float] = Header(None, alias="Battery-Voltage"),
     fw_version: Optional[str] = Header(None, alias="FW-Version"),
@@ -77,10 +66,7 @@ async def display_endpoint(
     width: Optional[int] = Header(800, alias="Width"),
     height: Optional[int] = Header(480, alias="Height")
 ):
-    """Primary device endpoint for screen content delivery."""
-    
-    # Authenticate device
-    device = authenticate_device(id, access_token)
+    """Primary device endpoint for screen content delivery (open access)."""
     
     # Update device status
     db.update_device_status(
@@ -201,12 +187,9 @@ async def log_endpoint(
 async def create_screen(
     screen_request: ScreenRequest,
     request: Request,
-    access_token: str = Header(..., alias="Access-Token")
+    access_token: str = Header(None, alias="Access-Token")
 ):
-    """Create new screen content programmatically."""
-    
-    # For simplicity, we're not implementing full auth here
-    # In production, you'd want proper API token validation
+    """Create new screen content programmatically (open access)."""
     
     base_url = get_base_url(request)
     
@@ -235,20 +218,28 @@ async def create_screen(
 @app.get("/api/current_screen", response_model=DisplayResponse)
 async def current_screen(
     request: Request,
-    device: Device = Depends(authenticate_device)
+    id: str = Header(..., description="Device MAC address"),
+    access_token: str = Header(None, alias="Access-Token")
 ):
-    """Get current screen without advancing playlists."""
+    """Get current screen without advancing playlists (open access)."""
     
     # For now, return the same as display endpoint but without updating last_seen
     base_url = get_base_url(request)
     
+    # Try to get device info if it exists
+    device = db.get_device(id)
+    device_name = device.friendly_id if device else id
+    last_seen = device.last_seen.strftime('%Y-%m-%d %H:%M:%S UTC') if device and device.last_seen else 'Never'
+    battery = device.battery_voltage if device else 'Unknown'
+    firmware = device.firmware_version if device else 'Unknown'
+    
     content = f"""Current Screen
 
-Device: {device.friendly_id}
-MAC: {device.mac_address}
-Last Seen: {device.last_seen.strftime('%Y-%m-%d %H:%M:%S UTC') if device.last_seen else 'Never'}
-Battery: {device.battery_voltage}V
-Firmware: {device.firmware_version}
+Device: {device_name}
+MAC: {id}
+Last Seen: {last_seen}
+Battery: {battery}V
+Firmware: {firmware}
 
 Server Status: Running
 Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}"""
