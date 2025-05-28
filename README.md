@@ -366,6 +366,7 @@ byos-fastapi/
 
 - `PYTHONPATH`: Set to `/app` in Docker
 - `PYTHONUNBUFFERED`: Set to `1` for better logging
+- `SERVER_URL`: URL watermark added to images (default: `http://localhost:8000`)
 
 ### Database
 

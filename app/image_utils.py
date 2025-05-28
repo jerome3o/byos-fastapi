@@ -1,4 +1,5 @@
 import hashlib
+import os
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -10,6 +11,55 @@ class ImageGenerator:
     def __init__(self, output_dir: str = "static/images"):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
+        # Get server URL from environment variable, fallback to localhost
+        self.server_url = os.getenv('SERVER_URL', 'http://localhost:8000')
+
+    def add_watermark(self, image: Image.Image) -> Image.Image:
+        """Add server URL watermark to bottom-right corner of image."""
+        draw = ImageDraw.Draw(image)
+        
+        # Try to use a small font, fallback to default if not available
+        font_size = 12
+        try:
+            font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", font_size)
+        except (OSError, IOError):
+            try:
+                font = ImageFont.load_default()
+            except:
+                # If all else fails, use basic drawing without font
+                font = None
+        
+        watermark_text = self.server_url
+        
+        if font:
+            # Get text size
+            bbox = draw.textbbox((0, 0), watermark_text, font=font)
+            text_width = bbox[2] - bbox[0]
+            text_height = bbox[3] - bbox[1]
+        else:
+            # Estimate text size without font
+            text_width = len(watermark_text) * 6
+            text_height = 10
+        
+        # Position in bottom-right corner with small margin
+        margin = 5
+        x = image.width - text_width - margin
+        y = image.height - text_height - margin
+        
+        # Draw white background rectangle for better readability
+        bg_padding = 2
+        draw.rectangle([
+            x - bg_padding, y - bg_padding,
+            x + text_width + bg_padding, y + text_height + bg_padding
+        ], fill='white', outline='black', width=1)
+        
+        # Draw the watermark text
+        if font:
+            draw.text((x, y), watermark_text, fill='black', font=font)
+        else:
+            draw.text((x, y), watermark_text, fill='black')
+            
+        return image
 
     def create_image(
         self,
@@ -44,9 +94,15 @@ class ImageGenerator:
         else:
             self._draw_default_content(draw, width, height)
 
+        # Convert to RGB for watermark (monochrome images can't handle colored watermarks)
+        rgb_image = image.convert('RGB')
+        
+        # Add watermark
+        rgb_image = self.add_watermark(rgb_image)
+
         # Save as PNG
         png_path = self.output_dir / f"{filename}.png"
-        self._convert_to_monochrome_png(image, png_path)
+        self._convert_to_monochrome_png(rgb_image, png_path)
 
         return filename, str(png_path)
 
@@ -167,6 +223,9 @@ class ImageGenerator:
         x = (display_size[0] - source_image.width) // 2
         y = (display_size[1] - source_image.height) // 2
         final_image.paste(source_image, (x, y))
+        
+        # Add watermark before converting to monochrome
+        final_image = self.add_watermark(final_image)
         
         # Convert to 1-bit monochrome
         final_image = final_image.convert('1')
@@ -418,9 +477,13 @@ class ImageGenerator:
 
             draw.text((sub_x, sub_y), subtitle, fill=0, font=sub_font)
 
+        # Convert to RGB for watermark and add it
+        rgb_image = image.convert('RGB')
+        rgb_image = self.add_watermark(rgb_image)
+
         # Save as PNG
         png_path = self.output_dir / f"{filename}.png"
-        self._convert_to_monochrome_png(image, png_path)
+        self._convert_to_monochrome_png(rgb_image, png_path)
 
         return filename, str(png_path)
 
