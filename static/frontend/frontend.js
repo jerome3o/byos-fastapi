@@ -217,29 +217,12 @@ async function sendDrawing() {
     updateStatus('Converting drawing to image...', '');
     
     try {
-        // Convert canvas to blob
+        // Convert canvas to blob and send as data URI
         canvas.toBlob(async (blob) => {
-            // Convert to base64 for sending as HTML with embedded image
             const reader = new FileReader();
             reader.onload = async function() {
                 try {
                     const base64 = reader.result;
-                    
-                    // Create HTML with the image
-                    const htmlContent = `
-                        <!DOCTYPE html>
-                        <html>
-                        <head>
-                            <style>
-                                body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; height: 100vh; }
-                                img { max-width: 100%; max-height: 100%; }
-                            </style>
-                        </head>
-                        <body>
-                            <img src="${base64}" alt="Drawing">
-                        </body>
-                        </html>
-                    `;
                     
                     const response = await fetch('/api/screens', {
                         method: 'POST',
@@ -247,8 +230,8 @@ async function sendDrawing() {
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
-                            content: htmlContent,
-                            content_type: 'html',
+                            content: base64,
+                            content_type: 'uri',
                             width: 800,
                             height: 480,
                             filename: `drawing-${Date.now()}`

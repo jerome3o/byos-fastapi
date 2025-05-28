@@ -133,6 +133,52 @@ class ImageGenerator:
         text_content = self._extract_text_from_html(html_content)
         return self.create_image(content=text_content, filename=filename)
 
+    def data_uri_to_image(self, data_uri: str, filename: str = None) -> tuple[str, str]:
+        """
+        Convert a data URI (base64 encoded image) to a properly formatted e-ink image.
+        """
+        import base64
+        import io
+        from PIL import Image
+        
+        # Extract the base64 data from the data URI
+        if ',' in data_uri:
+            base64_data = data_uri.split(',')[1]
+        else:
+            base64_data = data_uri
+            
+        # Decode base64 to image
+        image_data = base64.b64decode(base64_data)
+        source_image = Image.open(io.BytesIO(image_data))
+        
+        # Convert to proper e-ink format (same as create_image)
+        if source_image.mode != 'RGB':
+            source_image = source_image.convert('RGB')
+            
+        # Resize to fit display while maintaining aspect ratio
+        display_size = (800, 480)
+        source_image.thumbnail(display_size, Image.Resampling.LANCZOS)
+        
+        # Create new image with white background
+        final_image = Image.new('RGB', display_size, 'white')
+        
+        # Center the image
+        x = (display_size[0] - source_image.width) // 2
+        y = (display_size[1] - source_image.height) // 2
+        final_image.paste(source_image, (x, y))
+        
+        # Convert to 1-bit monochrome
+        final_image = final_image.convert('1')
+        
+        # Generate filename and save
+        if not filename:
+            filename = f"uri-image-{int(datetime.now().timestamp())}"
+        
+        file_path = os.path.join(self.output_dir, f"{filename}.png")
+        final_image.save(file_path, 'PNG')
+        
+        return filename, file_path
+
     def _extract_text_from_html(self, html: str) -> str:
         """Basic HTML text extraction."""
         import re

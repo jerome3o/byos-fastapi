@@ -224,6 +224,11 @@ async def create_screen(
             width=screen_request.width,
             height=screen_request.height,
         )
+    elif screen_request.content_type == "uri":
+        # Handle data URI (base64 encoded images from canvas)
+        filename, file_path = image_gen.data_uri_to_image(
+            screen_request.content, screen_request.filename
+        )
     else:
         # For other content types, treat as text for now
         filename, file_path = image_gen.create_image(
