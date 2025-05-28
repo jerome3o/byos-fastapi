@@ -105,10 +105,201 @@ schedule_updates(get_current_data, interval_minutes=30)
 - `POST /api/log` - Device telemetry collection
 - `POST /api/screens` - Programmatic screen creation
 - `GET /api/current_screen` - Current screen without playlist advancement
+- `POST /api/refresh_rate` - Set refresh rate for specific device
 
 ### Management Endpoints
 
-- `GET /` - Server status and information
+- `GET /` - Web frontend interface
+- `GET /status` - Server status and information
+
+## cURL Examples for Testing & Debugging
+
+### Device Simulation
+
+Test your server by simulating TRMNL device requests:
+
+```bash
+# Device MAC address for testing
+DEVICE_MAC="TEST_DEVICE_01"
+
+# 1. Device setup (first time connection)
+curl -X POST "http://localhost:8000/api/setup" \
+  -H "id: $DEVICE_MAC" \
+  -H "FW-Version: 1.5.2" \
+  -v
+
+# 2. Get display content (what device fetches for screen updates)
+curl -X GET "http://localhost:8000/api/display" \
+  -H "id: $DEVICE_MAC" \
+  -H "Battery-Voltage: 3.7" \
+  -H "FW-Version: 1.5.2" \
+  -H "RSSI: -45" \
+  -v
+
+# 3. Submit device logs/telemetry
+curl -X POST "http://localhost:8000/api/log" \
+  -H "id: $DEVICE_MAC" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "firmware_version": "1.5.2",
+    "battery_voltage": 3.7,
+    "wifi_ssid": "MyWiFi",
+    "rssi": -45,
+    "free_heap": 45000,
+    "min_free_heap": 40000,
+    "max_alloc_heap": 35000
+  }' \
+  -v
+
+# 4. Check current screen without advancing playlists
+curl -X GET "http://localhost:8000/api/current_screen" \
+  -H "id: $DEVICE_MAC" \
+  -v
+```
+
+### Content Creation
+
+Send content programmatically to your device:
+
+```bash
+# Send big text message (maximum screen coverage)
+curl -X POST "http://localhost:8000/api/screens" \
+  -H "id: $DEVICE_MAC" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "BIG TEXT!",
+    "content_type": "big_text",
+    "width": 800,
+    "height": 480,
+    "filename": "my-big-text"
+  }' \
+  -v
+
+# Send regular text content
+curl -X POST "http://localhost:8000/api/screens" \
+  -H "id: $DEVICE_MAC" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "Hello World!\nThis is a test message.\n\nCurrent time: $(date)",
+    "content_type": "text",
+    "width": 800,
+    "height": 480,
+    "filename": "hello-world-test"
+  }' \
+  -v
+
+# Send HTML content
+curl -X POST "http://localhost:8000/api/screens" \
+  -H "id: $DEVICE_MAC" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "content": "<html><body><h1>HTML Test</h1><p>This is HTML content rendered to image.</p></body></html>",
+    "content_type": "html",
+    "width": 800,
+    "height": 480,
+    "filename": "html-test"
+  }' \
+  -v
+```
+
+### Device Configuration
+
+```bash
+# Set refresh rate for device (in seconds)
+curl -X POST "http://localhost:8000/api/refresh_rate" \
+  -H "id: $DEVICE_MAC" \
+  -H "Refresh-Rate: 300" \
+  -v
+
+# Set longer refresh rate (30 minutes)
+curl -X POST "http://localhost:8000/api/refresh_rate" \
+  -H "id: $DEVICE_MAC" \
+  -H "Refresh-Rate: 1800" \
+  -v
+```
+
+### Server Status
+
+```bash
+# Check server status
+curl -X GET "http://localhost:8000/status" -v
+
+# Access web frontend
+curl -X GET "http://localhost:8000/" -v
+```
+
+### Testing Complete Device Flow
+
+Simulate the complete device lifecycle:
+
+```bash
+#!/bin/bash
+DEVICE_MAC="TEST_DEVICE_$(date +%s)"
+
+echo "=== Testing Complete Device Flow ==="
+echo "Device MAC: $DEVICE_MAC"
+
+echo -e "\n1. Device Setup (First Boot)"
+curl -s -X POST "http://localhost:8000/api/setup" \
+  -H "id: $DEVICE_MAC" \
+  -H "FW-Version: 1.5.2" | jq '.'
+
+echo -e "\n2. Send Custom Content"
+curl -s -X POST "http://localhost:8000/api/screens" \
+  -H "id: $DEVICE_MAC" \
+  -H "Content-Type: application/json" \
+  -d "{
+    \"content\": \"Test Device\\n$DEVICE_MAC\\n\\nTime: $(date)\",
+    \"content_type\": \"big_text\",
+    \"width\": 800,
+    \"height\": 480,
+    \"filename\": \"test-$(date +%s)\"
+  }" | jq '.'
+
+echo -e "\n3. Device Fetch Content"
+curl -s -X GET "http://localhost:8000/api/display" \
+  -H "id: $DEVICE_MAC" \
+  -H "Battery-Voltage: 3.7" \
+  -H "FW-Version: 1.5.2" | jq '.'
+
+echo -e "\n4. Device Submit Logs"
+curl -s -X POST "http://localhost:8000/api/log" \
+  -H "id: $DEVICE_MAC" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "firmware_version": "1.5.2",
+    "battery_voltage": 3.7,
+    "wifi_ssid": "TestWiFi",
+    "rssi": -45,
+    "free_heap": 45000,
+    "min_free_heap": 40000,
+    "max_alloc_heap": 35000
+  }' | jq '.'
+
+echo -e "\n=== Flow Complete ==="
+```
+
+### Debug Response Headers
+
+Add `-i` flag to see response headers:
+
+```bash
+# See all response headers and timing
+curl -X GET "http://localhost:8000/api/display" \
+  -H "id: TEST_DEVICE" \
+  -H "Battery-Voltage: 3.7" \
+  -i -v
+```
+
+### Verify Generated Images
+
+```bash
+# List generated images
+curl -s "http://localhost:8000/static/images/" | grep -o 'href="[^"]*\.png"' | sed 's/href="//g' | sed 's/"//g'
+
+# Download a specific image
+curl -o test-image.png "http://localhost:8000/static/images/your-filename.png"
+```
 
 ## Image Requirements
 
