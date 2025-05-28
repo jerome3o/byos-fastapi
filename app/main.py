@@ -22,6 +22,7 @@ from .models import (
 
 REFRESH_RATE = 900  # Default refresh rate in seconds (15 minutes)
 device_refresh_rates = {}  # Store per-device refresh rates
+device_latest_images = {}  # Store latest image filename for each device
 
 app = FastAPI(
     title="TRMNL Custom Server",
@@ -102,9 +103,14 @@ async def display_endpoint(
     # Generate or get current image
     base_url = get_base_url(request)
 
-    # Create big HELLO WORLD image using proper image generation
-    filename, file_path = image_gen.create_hello_world_image()
-    image_url = f"{base_url}/static/images/{filename}.png"
+    # Check if device has a latest image, otherwise use HELLO WORLD
+    if id in device_latest_images:
+        filename = device_latest_images[id]
+        image_url = f"{base_url}/static/images/{filename}.png"
+    else:
+        # Create big HELLO WORLD image as default
+        filename, file_path = image_gen.create_hello_world_image()
+        image_url = f"{base_url}/static/images/{filename}.png"
 
     # Use device-specific refresh rate if set, otherwise default
     device_refresh_rate = device_refresh_rates.get(id, REFRESH_RATE)
@@ -202,6 +208,7 @@ async def log_endpoint(
 async def create_screen(
     screen_request: ScreenRequest,
     request: Request,
+    id: str = Header(None, description="Device MAC address"),
     access_token: str = Header(None, alias="Access-Token"),
 ):
     """Create new screen content programmatically (open access)."""
@@ -230,6 +237,10 @@ async def create_screen(
         )
 
     image_url = f"{base_url}/static/images/{filename}.png"
+
+    # Store as latest image for the device if device ID provided
+    if id:
+        device_latest_images[id] = filename
 
     return ScreenResponse(status="success", image_url=image_url, filename=filename)
 
