@@ -139,6 +139,7 @@ class ImageGenerator:
         """
         import base64
         import io
+        import os
         from PIL import Image
         
         # Extract the base64 data from the data URI
