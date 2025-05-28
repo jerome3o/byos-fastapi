@@ -172,15 +172,9 @@ function showPreview(imageUrl) {
 // API functions
 async function sendTextMessage() {
     const message = document.getElementById('textMessage').value.trim();
-    const deviceId = document.getElementById('deviceId').value.trim();
     
     if (!message) {
         updateStatus('Please enter a message', 'error');
-        return;
-    }
-    
-    if (!deviceId) {
-        updateStatus('Please enter a device ID', 'error');
         return;
     }
     
@@ -190,8 +184,7 @@ async function sendTextMessage() {
         const response = await fetch('/api/screens', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'id': deviceId
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 content: message,
@@ -210,8 +203,8 @@ async function sendTextMessage() {
         updateStatus('Text message sent successfully!', 'success');
         showPreview(result.image_url);
         
-        // Update the device's refresh rate if changed
-        await updateRefreshRate(deviceId);
+        // Update the refresh rate if changed
+        await updateRefreshRate();
         
     } catch (error) {
         console.error('Error sending text message:', error);
@@ -220,12 +213,6 @@ async function sendTextMessage() {
 }
 
 async function sendDrawing() {
-    const deviceId = document.getElementById('deviceId').value.trim();
-    
-    if (!deviceId) {
-        updateStatus('Please enter a device ID', 'error');
-        return;
-    }
     
     updateStatus('Converting drawing to image...', '');
     
@@ -257,8 +244,7 @@ async function sendDrawing() {
                     const response = await fetch('/api/screens', {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json',
-                            'id': deviceId
+                            'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
                             content: htmlContent,
@@ -277,8 +263,8 @@ async function sendDrawing() {
                     updateStatus('Drawing sent successfully!', 'success');
                     showPreview(result.image_url);
                     
-                    // Update the device's refresh rate if changed
-                    await updateRefreshRate(deviceId);
+                    // Update the refresh rate if changed
+                    await updateRefreshRate();
                     
                 } catch (error) {
                     console.error('Error sending drawing:', error);
@@ -295,14 +281,13 @@ async function sendDrawing() {
     }
 }
 
-async function updateRefreshRate(deviceId) {
+async function updateRefreshRate() {
     const refreshRate = document.getElementById('refreshRate').value;
     
     try {
         const response = await fetch('/api/refresh_rate', {
             method: 'POST',
             headers: {
-                'id': deviceId,
                 'Refresh-Rate': refreshRate
             }
         });

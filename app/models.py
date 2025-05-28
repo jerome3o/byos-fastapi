@@ -54,7 +54,7 @@ class DeviceLog(BaseModel):
 
 
 class ScreenRequest(BaseModel):
-    content_type: Literal["html", "uri", "data"]
+    content_type: Literal["html", "uri", "data", "big_text"]
     content: str
     filename: str | None = None
     width: int = 800

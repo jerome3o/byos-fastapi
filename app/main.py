@@ -21,8 +21,7 @@ from .models import (
 )
 
 REFRESH_RATE = 900  # Default refresh rate in seconds (15 minutes)
-device_refresh_rates = {}  # Store per-device refresh rates
-device_latest_images = {}  # Store latest image filename for each device
+latest_image_filename = None  # Store the single latest image filename
 
 app = FastAPI(
     title="TRMNL Custom Server",
@@ -103,23 +102,21 @@ async def display_endpoint(
     # Generate or get current image
     base_url = get_base_url(request)
 
-    # Check if device has a latest image, otherwise use HELLO WORLD
-    if id in device_latest_images:
-        filename = device_latest_images[id]
+    # Check if we have any latest image, otherwise use HELLO WORLD
+    global latest_image_filename
+    if latest_image_filename:
+        filename = latest_image_filename
         image_url = f"{base_url}/static/images/{filename}.png"
     else:
         # Create big HELLO WORLD image as default
         filename, file_path = image_gen.create_hello_world_image()
         image_url = f"{base_url}/static/images/{filename}.png"
 
-    # Use device-specific refresh rate if set, otherwise default
-    device_refresh_rate = device_refresh_rates.get(id, REFRESH_RATE)
-
     return DisplayResponse(
         status=0,
         image_url=image_url,
         filename=filename,
-        refresh_rate=device_refresh_rate,
+        refresh_rate=REFRESH_RATE,
         update_firmware=False,
         firmware_url=None,
         reset_firmware=False,
@@ -238,9 +235,9 @@ async def create_screen(
 
     image_url = f"{base_url}/static/images/{filename}.png"
 
-    # Store as latest image for the device if device ID provided
-    if id:
-        device_latest_images[id] = filename
+    # Store as the latest image (single device mode)
+    global latest_image_filename
+    latest_image_filename = filename
 
     return ScreenResponse(status="success", image_url=image_url, filename=filename)
 
@@ -248,18 +245,18 @@ async def create_screen(
 @app.post("/api/refresh_rate")
 async def set_refresh_rate(
     request: Request,
-    id: str = Header(..., description="Device MAC address"),
     refresh_rate: int = Header(..., alias="Refresh-Rate"),
 ):
-    """Set refresh rate for a specific device."""
+    """Set refresh rate globally (single device mode)."""
     if refresh_rate < 60 or refresh_rate > 3600:
         return JSONResponse(
             status_code=400,
             content={"error": "Refresh rate must be between 60 and 3600 seconds"}
         )
     
-    device_refresh_rates[id] = refresh_rate
-    return {"status": "success", "message": f"Refresh rate set to {refresh_rate}s for device {id}"}
+    global REFRESH_RATE
+    REFRESH_RATE = refresh_rate
+    return {"status": "success", "message": f"Refresh rate set to {refresh_rate}s globally"}
 
 
 @app.get("/api/current_screen", response_model=DisplayResponse)
@@ -298,14 +295,11 @@ Time: {datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")}"""
     filename, file_path = image_gen.create_image(content=content)
     image_url = f"{base_url}/static/images/{filename}.png"
 
-    # Use device-specific refresh rate if set, otherwise default
-    device_refresh_rate = device_refresh_rates.get(id, REFRESH_RATE)
-
     return DisplayResponse(
         status=0,
         image_url=image_url,
         filename=filename,
-        refresh_rate=device_refresh_rate,
+        refresh_rate=REFRESH_RATE,
         update_firmware=False,
         firmware_url=None,
         reset_firmware=False,
