@@ -5,7 +5,7 @@ from datetime import datetime
 
 import uvicorn
 from fastapi import FastAPI, Header, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from .database import Database
@@ -20,7 +20,8 @@ from .models import (
     SetupResponse,
 )
 
-REFRESH_RATE = 9000  # Default refresh rate in seconds
+REFRESH_RATE = 900  # Default refresh rate in seconds (15 minutes)
+device_refresh_rates = {}  # Store per-device refresh rates
 
 app = FastAPI(
     title="TRMNL Custom Server",
@@ -61,7 +62,13 @@ def get_base_url(request: Request) -> str:
 
 @app.get("/")
 async def root():
-    """Root endpoint with server status."""
+    """Root endpoint - serves the web frontend."""
+    return FileResponse("static/frontend/index.html")
+
+
+@app.get("/status")
+async def status():
+    """Server status endpoint."""
     return {
         "message": "TRMNL Custom Server",
         "status": "running",
@@ -99,11 +106,14 @@ async def display_endpoint(
     filename, file_path = image_gen.create_hello_world_image()
     image_url = f"{base_url}/static/images/{filename}.png"
 
+    # Use device-specific refresh rate if set, otherwise default
+    device_refresh_rate = device_refresh_rates.get(id, REFRESH_RATE)
+
     return DisplayResponse(
         status=0,
         image_url=image_url,
         filename=filename,
-        refresh_rate=REFRESH_RATE,
+        refresh_rate=device_refresh_rate,
         update_firmware=False,
         firmware_url=None,
         reset_firmware=False,
@@ -202,6 +212,14 @@ async def create_screen(
         filename, file_path = image_gen.html_to_image(
             screen_request.content, screen_request.filename
         )
+    elif screen_request.content_type == "big_text":
+        # Use big text generation for maximum screen coverage
+        filename, file_path = image_gen.create_big_text_image(
+            screen_request.content, 
+            filename=screen_request.filename,
+            width=screen_request.width,
+            height=screen_request.height,
+        )
     else:
         # For other content types, treat as text for now
         filename, file_path = image_gen.create_image(
@@ -214,6 +232,23 @@ async def create_screen(
     image_url = f"{base_url}/static/images/{filename}.png"
 
     return ScreenResponse(status="success", image_url=image_url, filename=filename)
+
+
+@app.post("/api/refresh_rate")
+async def set_refresh_rate(
+    request: Request,
+    id: str = Header(..., description="Device MAC address"),
+    refresh_rate: int = Header(..., alias="Refresh-Rate"),
+):
+    """Set refresh rate for a specific device."""
+    if refresh_rate < 60 or refresh_rate > 3600:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Refresh rate must be between 60 and 3600 seconds"}
+        )
+    
+    device_refresh_rates[id] = refresh_rate
+    return {"status": "success", "message": f"Refresh rate set to {refresh_rate}s for device {id}"}
 
 
 @app.get("/api/current_screen", response_model=DisplayResponse)
@@ -252,11 +287,14 @@ Time: {datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")}"""
     filename, file_path = image_gen.create_image(content=content)
     image_url = f"{base_url}/static/images/{filename}.png"
 
+    # Use device-specific refresh rate if set, otherwise default
+    device_refresh_rate = device_refresh_rates.get(id, REFRESH_RATE)
+
     return DisplayResponse(
         status=0,
         image_url=image_url,
         filename=filename,
-        refresh_rate=REFRESH_RATE,
+        refresh_rate=device_refresh_rate,
         update_firmware=False,
         firmware_url=None,
         reset_firmware=False,
